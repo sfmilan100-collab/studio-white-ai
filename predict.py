@@ -5,14 +5,23 @@ import torch
 import numpy as np
 from PIL import Image
 
-# Import your custom modules
-# NOTE: Ensure the 'qwenimage' folder is present in this directory!
+# --- IMPORT FIX FOR FLATTENED FILES ---
+# Attempt to load custom modules from root OR qwenimage folder
 try:
+    print("Attempting to import from qwenimage package...")
     from qwenimage.pipeline_qwenimage_edit_plus import QwenImageEditPlusPipeline
     from qwenimage.transformer_qwenimage import QwenImageTransformer2DModel
     from qwenimage.qwen_fa3_processor import QwenDoubleStreamAttnProcessorFA3
 except ImportError:
-    print("WARNING: 'qwenimage' module not found. Please ensure the local folder is copied here.")
+    print("Package import failed. Attempting direct import (Flattened)...")
+    try:
+        from pipeline_qwenimage_edit_plus import QwenImageEditPlusPipeline
+        from transformer_qwenimage import QwenImageTransformer2DModel
+        from qwen_fa3_processor import QwenDoubleStreamAttnProcessorFA3
+    except ImportError as e:
+        print(f"CRITICAL ERROR: Could not find model files. {e}")
+        raise e
+# ----------------------------------------
 
 class Predictor(BasePredictor):
     def setup(self) -> None:
@@ -21,8 +30,7 @@ class Predictor(BasePredictor):
         self.dtype = torch.bfloat16
 
         print("Loading Qwen Image Edit Pipeline...")
-        # Note: We rely on the qwenimage module being present. 
-        # If it uses relative paths for 'prithivMLmods', they should be downloaded by HF Hub automatically.
+        
         try:
             self.pipe = QwenImageEditPlusPipeline.from_pretrained(
                 "Qwen/Qwen-Image-Edit-2509",
@@ -42,7 +50,6 @@ class Predictor(BasePredictor):
                 
         except Exception as e:
             print(f"Error loading model: {e}")
-            # If we fail, it might be because 'qwenimage' isn't finding its imports.
             raise e
 
         # Load Adapters
@@ -57,7 +64,6 @@ class Predictor(BasePredictor):
 
     def update_dimensions(self, image):
         original_width, original_height = image.size
-        # Limit to 1024 max dimension for GPU memory safety
         if original_width > original_height:
             new_width = 1024
             aspect_ratio = original_height / original_width
@@ -67,7 +73,6 @@ class Predictor(BasePredictor):
             aspect_ratio = original_width / original_height
             new_width = int(new_height * aspect_ratio)
         
-        # Must be divisible by 8 for VAE
         return (new_width // 8) * 8, (new_height // 8) * 8
 
     def predict(
@@ -98,11 +103,8 @@ class Predictor(BasePredictor):
         self.pipe.set_adapters([adapter_name], adapter_weights=[1.0])
         
         # 3. Setup Generator
-        # Handle random seed if user passed 0 or None, though Cog passes default 42 usually.
-        # If we really want random:
         if seed is None or seed < 0:
             seed = int.from_bytes(os.urandom(2), "big")
-            
         print(f"Using seed: {seed}")
         generator = torch.Generator(device=self.device).manual_seed(seed)
         
