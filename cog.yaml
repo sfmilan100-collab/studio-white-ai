@@ -27,3 +27,4 @@ build:
     # If qwenimage is a private local folder, ensure it is in this directory
 
 predict: "predict.py:Predictor"
+# trigger build v1
