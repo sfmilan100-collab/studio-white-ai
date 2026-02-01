@@ -1,0 +1,29 @@
+# Configuration for Replicate (replicate.com)
+build:
+  # The GPU environment
+  gpu: true
+  
+  # Python version
+  python_version: "3.10"
+  
+  # System packages
+  system_packages:
+    - "libgl1-mesa-glx"
+    - "libglib2.0-0"
+    - "git"
+
+  # Python packages
+  python_packages:
+    - "torch==2.1.2"
+    - "diffusers==0.25.0"
+    - "transformers==4.36.2"
+    - "accelerate==0.25.0"
+    - "huggingface-hub==0.20.2"
+    - "Pillow==10.2.0"
+    - "numpy==1.26.3"
+    - "safetensors==0.4.1"
+    - "sentencepiece==0.1.99"
+    # Note: 'qwenimage' package must be included in the folder or installed via git
+    # If qwenimage is a private local folder, ensure it is in this directory
+
+predict: "predict.py:Predictor"
